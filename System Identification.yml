@@ -1,0 +1,38 @@
+-
+    name: System Identification
+    hosts: localhost
+    become: yes
+    become_method: sudo
+    vars:
+        cap_file: /tmp/packet_capture_{{ ansible_hostname }}_{{ ansible_date_time['epoch'] }}.cap
+        #targ_file: Need location of target file
+        nmap_os: /tmp/nmap_os_{{ ansible_hostname }}_{{ ansible_date_time['epoch'] }}.txt
+        nmap_svc: /tmp/nmap_services_{{ ansible_hostname }}_{{ ansible_date_time['epoch'] }}.txt
+    tasks:
+        - name: start tcpdump
+          #Reference: https://gist.github.com/btotr/22d9b239ab6b50b608be58285422cd24
+          command: /usr/bin/tcpdump -i any -w {{ cap_file }}
+        
+        - name: OS Detection
+          shell:
+            nmap -n -O -iL {{ targ_file }} > {{ nmap_os }}
+
+        - name: Services Scan
+          shell:
+            nmap -n -O -iL {{ targ_file }} > nmap_svc
+        
+        - name: kill tcpdump
+          command: /usr/bin/pkill tcpdump
+        
+        - name: compress PCAP
+          command: gzip {{ cap_file }} chdir=/tmp
+        
+        - name: copy logs to storage
+          #need storage location
+          #fetch: src=/tmp/{{ cap_file }}.gz dest=/tmp/ flat yes
+
+        - name: remove files from local computer
+          file: path=/tmp/{{ cap_file }}.gz state=absent
+        
+        - name: Review files
+          debug: msg='Review {{ nmap_os }} and {{ nmap_svc }} files vulnerabiltiies'
